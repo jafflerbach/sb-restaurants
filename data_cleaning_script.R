@@ -61,8 +61,10 @@ geocode_ref <- geo_code_ref %>%
   filter(!is.na(lat)) %>% 
   bind_rows(check_missings) %>% 
   filter(!is.na(lat)) %>% 
-  bind_rows(check_missings2)
+  bind_rows(check_missings2) %>% 
+  mutate(Address = str_remove_all(address, ", California$")) %>% 
+  select(-address)
 
 
 write_csv(master_data, "data/master_data.csv")
-write_csv(geocode_ref, "data/geocode_ref.csv")
+write_csv(df2, "data/geocode_ref.csv")
