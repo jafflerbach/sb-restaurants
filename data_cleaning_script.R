@@ -33,7 +33,7 @@ mismatches <- master_data %>%
 
 # set api
 #myAPI <- read_file("api.txt") # this lives on my computer sorry 
-register_google(key = "AIzaSyABEJ6H1VtH5itry5bO5j1Ba6hjweKPBzw")
+register_google(key = myAPI)
 
 
 geo_code_ref <- master_data %>% 
