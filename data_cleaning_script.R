@@ -33,27 +33,27 @@ mismatches <- master_data %>%
 
 # set api
 #myAPI <- read_file("api.txt") # this lives on my computer sorry 
-register_google(key = myAPI)
+register_google(key = "AIzaSyABEJ6H1VtH5itry5bO5j1Ba6hjweKPBzw")
 
 
 geo_code_ref <- master_data %>% 
   distinct(Address) %>% 
   mutate(state = "California") %>% 
-  unite("address", c("Address", "state"), sep = ", ") %>% 
-  mutate_geocode(address)
+  unite("address_state", c("Address", "state"), sep = ", ", remove = FALSE) %>% 
+  mutate_geocode(address_state)
 
 # idk why these didnt all work the first time I think it was some account info updating
 check_missings <- geo_code_ref %>% 
   filter(is.na(lat)) %>% 
   select(-lat, -lon) %>% 
-  mutate_geocode(address)
+  mutate_geocode(address_state)
 
 # google maps didn't like the "#" for whatever reason
 check_missings2 <- check_missings %>% 
   filter(is.na(lat)) %>% 
   select(-lat, -lon) %>% 
-  mutate(address = str_remove(address, "#")) %>% 
-  mutate_geocode(address)
+  mutate(address_state = str_remove(address_state, "#")) %>% 
+  mutate_geocode(address_state)
 
 
 # attaching the different segments to a master sheet
@@ -62,9 +62,8 @@ geocode_ref <- geo_code_ref %>%
   bind_rows(check_missings) %>% 
   filter(!is.na(lat)) %>% 
   bind_rows(check_missings2) %>% 
-  mutate(Address = str_remove_all(address, ", California$")) %>% 
-  select(-address)
+  select(-address_state, -state)
 
 
 write_csv(master_data, "data/master_data.csv")
-write_csv(df2, "data/geocode_ref.csv")
+write_csv(geocode_ref, "data/geocode_ref.csv")
