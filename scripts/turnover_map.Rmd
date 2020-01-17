@@ -36,14 +36,9 @@ library(kableExtra)
 data <- read_csv("../data/master_data.csv") 
 geocodes <- read_csv("../data/geocode_ref.csv")
 ```
+### Cleaning data
 
-### Clean data
-
-Missing restaurants! Just looking at the data I noticed the following are missing, likely because they opened before 2005. But not all, some of these are newer!
-
-Jeannines, Joe's, Roy's, Chuck's, Kanaloa, Lily's tacos, Alcazar, Pizza Mizza (opened recently at 1114 State St, not sure why its not there), Satellite, Andersens, 
-
-What address has had the most number of restaurants
+What address has had the most number of restaurants? Since some of the addresses aren't matching (sometimes it says "State Street" or "State St.") it's easier to match on lat/lon since those are unique.
 
 ```{r}
 df <- data %>%
@@ -65,7 +60,7 @@ Since the Public Market has the most number of restaurants due to shared space, 
 df_updated <- df %>%
   mutate(num_spaces = 
            case_when(Address == "38 W. Victoria St, Santa Barbara" ~ 11,
-                     Address == "1114 State St, Santa Barbara" ~ 6,
+                     Address == "1114 State St, Santa Barbara" ~ 5, #important note, Mizza's address is 1112 so not included
                      TRUE ~ 1
                        ),
          num_true_restaurants = num_restaurants/num_spaces)
