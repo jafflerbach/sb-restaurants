@@ -1,0 +1,70 @@
+---
+title: 'Santa Barbara restaurant idle time'
+author: "Jamie Afflerbach"
+output: 
+  html_document:
+    code_folding: show
+    toc: true
+    toc_depth: 3
+    toc_float: yes
+    number_sections: false
+    theme: cerulean
+    highlight: haddock
+  pdf_document:
+    toc: true
+---
+
+### Setup
+
+```{r setup, warning = F, message = F}
+
+knitr::opts_chunk$set(warning = F, message = F)
+
+#libraries
+library(tidyverse)
+library(mapview)
+library(sf)
+library(RColorBrewer)
+library(lubridate)
+```
+
+### Load data
+
+```{r data}
+data <- read_csv("../data/master_data.csv") 
+geocodes <- read_csv("../data/geocode_ref.csv")
+```
+
+### Cleaning data
+
+Convert the `Opened` and `Died` columns into dates.
+
+Important to find the addresses that didn't exist all thew ay back to 2005. Example - satellite, public market, blackbird. These were built more recently.
+
+```{r}
+df <- data %>%
+  left_join(geocodes) %>%
+  mutate(Opened_date = ymd(Opened, truncated = 1),
+         Closed_date = ymd(Died, truncated = 1)) %>%
+group_by(lat, lon) %>%
+  mutate(earliest_open_date = min(Opened_date),
+         max_days_open = ymd("2019-12-31") - earliest_open_date) #the maximum number of days the place could have a restaurant
+
+ ### I think hre we group by lat/lon??         
+
+days_open = Closed_date - Opened_date,
+         
+        
+         
+         months_open = days_open/30, #just taking average here
+         months_closed = 240 - months_open) 
+``` 
+
+
+## How long have addresses been idle?
+
+Count the number of months each address has sat empty.
+
+```{r}
+
+```
