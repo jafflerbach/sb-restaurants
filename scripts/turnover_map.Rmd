@@ -43,6 +43,7 @@ What address has had the most number of restaurants? Since some of the addresses
 ```{r}
 df <- data %>%
   left_join(geocodes) %>%
+  filter(!Address %in% c("Mobile - see web site for locations", "Food Truck")) %>% #remove restaurants that are "Mobile" and state their address as "Mobile - see web site for locations". These have geocodes somehow...
   group_by(lat, lon) %>%
   mutate(num_restaurants = n()) %>%
   ungroup() %>%
@@ -51,7 +52,7 @@ df <- data %>%
 
 kable(df) %>%
   kable_styling(bootstrap_options = c("striped", "condensed"), font_size = 10, fixed_thead = T) %>%
-  scroll_box(width = "100%", height = "200px")
+  scroll_box(width = "100%", height = "400px")
 ```
 
 Since the Public Market has the most number of restaurants due to shared space, we aren't getting an accurate picture of turnover. Same for 1114 State St (La Arcada Plaza) which has Jeannines, Pizza Mizza, State & Fig and others. We can divide these two addresses by the total number of restaurants/spaces at them for a better indicator. This is done manually.
@@ -59,14 +60,18 @@ Since the Public Market has the most number of restaurants due to shared space, 
 ```{r restaurant_fix}
 df_updated <- df %>%
   mutate(num_spaces = 
-           case_when(Address == "38 W. Victoria St, Santa Barbara" ~ 11,
+           case_when(Address %in% c("38 W. Victoria St, Santa Barbara", "38 West Victoria St. Santa Barbara", "38 West Victoria Street #119, Santa Barbara") ~ 11, # a couple public market places have different addresses
                      Address == "1114 State St, Santa Barbara" ~ 5, #important note, Mizza's address is 1112 so not included
+                     Address == "7127 Hollister Ave, Goleta" ~ 4, #the goleta strip mall near campus with Albertsons
+                     Address == "At the UCen on the UCSB Campus" ~ 8,
                      TRUE ~ 1
                        ),
          num_true_restaurants = num_restaurants/num_spaces)
 ```
 
-### Map
+### Turnover map of all restaurants
+
+That we have data for...
 
 Turn into sf object
 
@@ -76,6 +81,11 @@ DT_sf = st_as_sf(df_updated, coords = c("lon", "lat"),
                  crs = 4326) %>%
   left_join(df)
 ```
+```{r}
+mapview(DT_sf, zcol = "num_true_restaurants", col.regions = rev(brewer.pal(7, "RdYlGn")), alpha.regions = 1, layer.name = "# restaurants since 2005")
+```
+
+### Lower state street
 
 Filtering just for lower state street locations (south of Micheltorena)
 ```{r lower_state_st}
