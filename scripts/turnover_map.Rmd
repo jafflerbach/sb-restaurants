@@ -1,0 +1,97 @@
+---
+title: 'Santa Barbara restaurant turnover'
+author: "Jamie Afflerbach"
+output: 
+  html_document:
+    code_folding: show
+    toc: true
+    toc_depth: 3
+    toc_float: yes
+    number_sections: false
+    theme: cerulean
+    highlight: haddock
+  pdf_document:
+    toc: true
+---
+
+## Looking at restaurant turnover in Santa Barbara
+
+### Setup
+
+```{r setup, warning = F, message = F}
+
+knitr::opts_chunk$set(warning = F, message = F)
+
+#libraries
+library(tidyverse)
+library(mapview)
+library(sf)
+library(RColorBrewer)
+library(kableExtra)
+```
+
+### Load data
+
+```{r data}
+data <- read_csv("../data/master_data.csv") 
+geocodes <- read_csv("../data/geocode_ref.csv")
+```
+
+### Clean data
+
+Missing restaurants! Just looking at the data I noticed the following are missing, likely because they opened before 2005. But not all, some of these are newer!
+
+Jeannines, Joe's, Roy's, Chuck's, Kanaloa, Lily's tacos, Alcazar, Pizza Mizza (opened recently at 1114 State St, not sure why its not there), Satellite, Andersens, 
+
+What address has had the most number of restaurants
+
+```{r}
+df <- data %>%
+  left_join(geocodes) %>%
+  group_by(lat, lon) %>%
+  mutate(num_restaurants = n()) %>%
+  ungroup() %>%
+  arrange(desc(num_restaurants))
+  
+
+kable(df) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), font_size = 10, fixed_thead = T) %>%
+  scroll_box(width = "100%", height = "200px")
+```
+
+Since the Public Market has the most number of restaurants due to shared space, we aren't getting an accurate picture of turnover. Same for 1114 State St (La Arcada Plaza) which has Jeannines, Pizza Mizza, State & Fig and others. We can divide these two addresses by the total number of restaurants/spaces at them for a better indicator. This is done manually.
+
+```{r restaurant_fix}
+df_updated <- df %>%
+  mutate(num_spaces = 
+           case_when(Address == "38 W. Victoria St, Santa Barbara" ~ 11,
+                     Address == "1114 State St, Santa Barbara" ~ 6,
+                     TRUE ~ 1
+                       ),
+         num_true_restaurants = num_restaurants/num_spaces)
+```
+
+### Map
+
+Turn into sf object
+
+```{r sf_obj}
+
+DT_sf = st_as_sf(df_updated, coords = c("lon", "lat"), 
+                 crs = 4326) %>%
+  left_join(df)
+```
+
+Filtering just for lower state street locations (south of Micheltorena)
+```{r lower_state_st}
+lower_state_st <- DT_sf %>%
+  filter(str_detect(Address, "State St"),
+         lat < 34.43)
+```
+
+Map turnover using `mapview`
+
+```{r}
+mapview(lower_state_st, zcol = "num_true_restaurants", col.regions = rev(brewer.pal(7, "RdYlGn")), alpha.regions = 1, layer.name = "# restaurants since 2005")
+```
+
