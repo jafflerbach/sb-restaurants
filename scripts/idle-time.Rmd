@@ -39,32 +39,46 @@ geocodes <- read_csv("../data/geocode_ref.csv")
 
 Convert the `Opened` and `Died` columns into dates.
 
-Important to find the addresses that didn't exist all thew ay back to 2005. Example - satellite, public market, blackbird. These were built more recently.
+Important to find the addresses that didn't exist all the way back to 2007. Example - satellite, public market, blackbird. These were built more recently.
 
 ```{r}
 df <- data %>%
+  filter(nchar(Died) != 4) %>% #this removes 2005 and 2006. Those restaurants do not have a month attached
   left_join(geocodes) %>%
-  mutate(Opened_date = ymd(Opened, truncated = 1),
-         Closed_date = ymd(Died, truncated = 1)) %>%
+  mutate(Opened_date = dplyr::if_else(
+            is.na(Opened), ymd("2007-01-01"), #if there is no open date, assume it opened Jan 1, 2007. We can adjust this later but for idle time since 2007 I Think this is fine.
+            ymd(Opened, truncated = 1)),
+         Closed_date = dplyr::if_else(
+             is.na(Died), today(), #if it hasn't died, it's still open so give it the most current date.
+             ymd(Died, truncated = 1)),
+         individual_restaurant_length = Closed_date - Opened_date) %>% #total number of days restaurant was open
 group_by(lat, lon) %>%
-  mutate(earliest_open_date = min(Opened_date),
-         max_days_open = ymd("2019-12-31") - earliest_open_date) #the maximum number of days the place could have a restaurant
+  mutate(total_days_open = sum(individual_restaurant_length), #calculate total days open
+         earliest_open_date = min(Opened_date, na.rm = T),    #get earliest possible open date
+         max_days_open = today() - earliest_open_date) %>%  #the maximum number of days the place could have a restaurant
+  ungroup() %>%
+  mutate(proportion_vacant = 100*(1-(as.numeric(total_days_open)/as.numeric(max_days_open)))) %>%
+  select(Address, lon, lat, total_days_open, max_days_open, proportion_vacant) %>%
+  distinct()
+```
 
- ### I think hre we group by lat/lon??         
 
-days_open = Closed_date - Opened_date,
+Next - find addresses with no open date since the most recent close date. This will help us find restaurants that maybe are no longer restaurants. For example Italian & Greek Market_636 State St, Santa Barbara
          
-        
-         
-         months_open = days_open/30, #just taking average here
-         months_closed = 240 - months_open) 
-``` 
+ 
 
-
-## How long have addresses been idle?
-
-Count the number of months each address has sat empty.
+Ok some of these are negative probably because there are multiple locations at each address. Filtering just for positive
 
 ```{r}
 
+idle_sf <- st_as_sf(df, coords = c("lon", "lat"), 
+                 crs = 4326) %>%
+  filter(proportion_vacant >= 0) %>%
+  mutate(prop_vacant = as.integer(proportion_vacant))
+
+pink2 = colorRampPalette(c('darkgreen', 'yellow', 'red'))
+
+mapview(idle_sf, zcol = "prop_vacant", alpha = 0.8, layer.name = "% of time since 2007 vacant", col.region = pink2, at = seq(0, 100, 5))
+
 ```
+

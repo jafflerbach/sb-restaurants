@@ -73,7 +73,7 @@ df_updated <- df %>%
 
 That we have data for...
 
-Turn into sf object
+Turn into `sf` object
 
 ```{r sf_obj}
 
@@ -81,6 +81,8 @@ DT_sf = st_as_sf(df_updated, coords = c("lon", "lat"),
                  crs = 4326) %>%
   left_join(df)
 ```
+
+
 ```{r}
 mapview(DT_sf, zcol = "num_true_restaurants", col.regions = rev(brewer.pal(7, "RdYlGn")), alpha.regions = 1, layer.name = "# restaurants since 2005")
 ```
