@@ -1,0 +1,124 @@
+---
+title: "Yelp API"
+author: "Gordon Blasco"
+date: "1/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# GOAL: Set up the yelp API to get category aliases for resturaunt data
+
+
+```{r}
+library(tidyverse)
+library(here)
+library(yelp)
+```
+
+```{r}
+
+access_token <- "add in api key from comp"
+
+```
+
+```{r}
+raw_data <- read_csv(here("data", "master_data.csv")) 
+geo_raw <- read_csv(here("data", "geocode_ref.csv")) 
+
+
+raw_master <- raw_data %>% 
+  left_join(geo_raw)
+```
+
+
+# just use a for loop...
+```{r}
+
+## prep the data 
+
+loop_prep <- raw_master %>% 
+  #head(7) %>% 
+  mutate(city = "Santa Barbara",
+         country = "US",
+         state = "CA",
+         yelp_business_id = NA)
+
+## run the loop
+
+loop_final <- loop_prep
+
+for (i in 1:nrow(loop_prep)) {
+  
+  #create a vector for each bit of data we need
+  
+  the_name = loop_prep$Name[i]
+  the_city = loop_prep$city[i]
+  the_country = loop_prep$country[i]
+  the_state = loop_prep$state[i]
+  the_address = loop_prep$Address[i]
+  the_lat = loop_prep$lat[i]
+  the_lon = loop_prep$lon[i]
+  
+  
+  test <- yelp::business_match(
+  access_token = access_token,
+  name = the_name,
+  city = the_city, 
+  country = the_country,
+  state = the_state,
+  address1 = the_address,
+  latitude = the_lat,
+  longitude = the_lon
+)
+  
+  
+b_id <- test$business_id 
+
+b_id <- if_else(is.null(b_id), "null", b_id)
+
+loop_final$yelp_business_id[i] <- b_id
+  
+}
+
+
+beezies <- loop_final %>% 
+  filter(yelp_business_id != "null") %>% 
+  pull(yelp_business_id)
+
+blank_df <- yelp::business_lookup(
+  businesses = beezies[1],
+  access_token = access_token)
+
+final_df <- blank_df %>%
+  filter(city == "made up town to blank df")
+
+
+for (i in 1:length(beezies)) {
+  
+  the_biz <- beezies[i]
+  
+  df <- yelp::business_lookup(
+  businesses = the_biz,
+  access_token = access_token)
+  
+final_df <- final_df %>% bind_rows(df)
+  
+}
+
+saveRDS(loop_final, here("data", "yelp_business_id"))
+saveRDS(final_df, here("data", "yelp_categories"))
+
+
+```
+
+
+```{r}
+# 
+# yelp_categories <- yelp::categories("appliances",
+#   access_token = access_token
+# )
+```
+
